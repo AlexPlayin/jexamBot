@@ -1,4 +1,21 @@
 # JExamWatcher
+
+## Requirements
+    selenium
+    python-telegram-bot
+    pyvirtualdisplay
+
+## Setup
+
+Requires a `config.json`:
+
+    {"login_credentials": {"username": "jexam_Username", "password": "jExam_Password"}, "telegram": {"bot_token": "telegram bot token"}, "known_exams": [""], "classes": {"semesterid": "3362686", "watch": [3392553, 3362770, 3363080, 3362748], "classes": {}, "name": {"3392553": "Test 1", "3362770": "Test 2", "3363080": "Formale Systeme", "3362748": "Test 3"}}}
+
+and a `users.json`:
+
+    {"sub": [], "private": []}
+
+in the same directory as the `main.py`
 ## Features
 
 1. Login into jExam
@@ -6,7 +23,6 @@
 3. Read newly released lesson times
 4. Send new notifications via Telegram Bot
 
----
 ## 1. Login into jExam
 
 Login happens on url
@@ -27,7 +43,7 @@ Login to receive login token in session
 TODO: Possible timeout after X Minutes ???
 EDIT: I
 
----
+
 ## 2. Read exam results
 
 Endpoint :
@@ -45,7 +61,7 @@ in this there are tr's with ids `node*i*i*`
 
 theory:
 always node0i*i0 is important 
----
+
 ## 3. Read newly released lesson times
 
 Endpoint :
