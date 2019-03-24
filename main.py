@@ -152,9 +152,11 @@ def selectClasses(driver, ids):
         # int() is needed as the trimed class is a string
         if int(itemID) in ids:
             # if id is one of the ones we watch --> click
-            c.find_elements_by_tag_name('a')[0].click()
-            print("Clicked " + itemID)
-    
+            try:
+                c.find_elements_by_tag_name('a')[0].click()
+                print("Clicked " + itemID)
+            except Exception:
+                print("Couldnt click element")
     return
 
 
