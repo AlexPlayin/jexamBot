@@ -1,12 +1,11 @@
 ######################
 # telegram bot functionality
 ######################
+print("4")
 
-import __main__
+from aiogram import Bot, Dispatcher, executor, types
 
-import telegram 
-from telegram.ext import Updater
-
+import asyncio
 import json
 import io
 import threading
@@ -17,30 +16,51 @@ privateids = []
 
 endFunction = None
 
+print("3")
+
+
 # Load config
 with open('config.json') as data_file:
     config = json.load(data_file)
 
+loop = asyncio.get_event_loop()
+bot = Bot(token=config['telegram']['bot_token'], loop=loop)
+dp = Dispatcher(bot, loop=loop)
+
+# LOGGING FOR TELEGRAM
+import logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+
+# Start bot
+
+
+print("below")
 
 # FUNCTIONS
-def start(bot, update):
-    # Will be called when somebody writes /start to the bot
-    if (update.message.chat_id in chatids):
-        bot.send_message(chat_id=update.message.chat_id, text="You are already subscribed to grade updates")
+
+@dp.message_handler(commands=['start'])
+async def send_welcome(message: types.Message):
+    print("in")
+    """
+    This handler will be called when client send `/start` or `/help` commands.
+    """
+    if message.chat.id in chatids:
+        await message.reply("You are aready subscribed!")
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="You are now subscribed to grade updates")
-        chatids.append(update.message.chat_id)
+        await message.reply("You are now subscribed to updates!")
+        chatids.append(message.chat.id)
         saveUsers()
 
-def sendBroadcast(message):
+
+async def sendBroadcast(message):
     # Sends message to everyone subscribed
     for uid in chatids:
-        bot.send_message(chat_id=uid, text=message)
+        await bot.send_message(uid, message)
 
-def sendPrivate(message):
+async def sendPrivate(message):
     # Sends message to everyone logged in private
     for uid in privateids:
-        bot.send_message(chat_id=uid, text=message)
+        await bot.send_message(uid, message)
 
 def loadUsers ():
     with open('users.json') as data_file:
@@ -55,26 +75,31 @@ def saveUsers ():
     with open('users.json', 'w') as outfile: 
       json.dump(data, outfile)
 
-def setPrivate(bot, update):
+@dp.message_handler(commands=['private'])
+async def setPrivate(message: types.Message):
     print("tries private")
-    message = update.message.text
+    message = message.text
     message = message[9:]
     print(message)
     if message == (config['telegram']['bot_token'][-6:]):
-        privateids.append(update.message.chat_id)
+        privateids.append(message.chat.id)
         saveUsers()
-        bot.send_message(chat_id=update.message.chat_id, text='You are now subscribed to private!')
+        await bot.send_message(message.chat.id, 'You are now subscribed to private!')
 
-def endBot(bot, update):
-    if (update.message.chat_id in privateids):
+@dp.message_handler(commands=['stop'])
+async def endBot(message: types.Message):
+    if (message.chat.id in privateids):
         saveUsers()
         endFunction()
-        bot.send_message(chat_id=update.message.chat_id, text='Bot is shutting down!')
+        await bot.send_message(message.chat.id, 'Bot is shutting down!')
         threading.Thread(target=shutdown).start()
 
+@dp.message_handler()
+async def echo(message: types.Message):
+    await bot.send_message(message.chat.id, message.text)
+
 def shutdown():
-    updater.stop()
-    updater.is_idle = False
+    bot.close()
 
 def setEndFunction(function):
     global endFunction
@@ -84,31 +109,16 @@ def setEndFunction(function):
 chatids, privateids = loadUsers()
 
 print(chatids)
-print (privateids)
+print (privateids)  
+
 # ----- SETUP BOT ------
-bot = telegram.Bot(token=config['telegram']['bot_token'])
-
-updater = Updater(token=config['telegram']['bot_token'])
-
-dispatcher = updater.dispatcher
-
-# LOGGING FOR TELEGRAM
-import logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 
-# Initiates easier handling of bot
-from telegram.ext import CommandHandler
-start_handler = CommandHandler('start', start)
-private_handler = CommandHandler('private', setPrivate)
-stop_handler = CommandHandler('stop', endBot)
-
-dispatcher.add_handler(start_handler)
-dispatcher.add_handler(private_handler)
-dispatcher.add_handler(stop_handler)
-
-# Start bot
-updater.start_polling()
-print("Starting bot")
+def startBot(loop):
+    asyncio.set_event_loop(loop)
+    executor.start_polling(dp, loop=loop, skip_updates=True)
+    loop.run_forever()
 
 
+t = threading.Thread(target=startBot, args=(loop,))
+t.start() 

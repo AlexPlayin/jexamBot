@@ -1,5 +1,6 @@
 #!/usr/local/bin/python3
 
+print("2")
 # Required for server application as selenium works in firefox window
 from pyvirtualdisplay import Display
 display = Display(visible=0, size=(800, 600))
@@ -7,12 +8,42 @@ display.start()
 
 from selenium import webdriver
 from selenium.common import exceptions
+from selenium.webdriver.firefox.options import Options
+
+options = Options()
+options.headless = True
 
 import json
 import io
-import requests
 import time
 
+import telegrambot
+
+telegrambot.setEndFunction(closeFunction)
+
+
+config = loadConfig()
+
+# Provide config to telegram bot
+telegrambot.config = config
+
+# Firefox Instance for visiting jExam
+
+knownExams = config["known_exams"]
+
+# checkNewGrades()
+
+noEnd = True
+
+print("start2")
+
+#time.sleep(120)
+while noEnd:
+    checkNewReleases()
+    time.sleep(900)
+    checkNewGrades()
+    time.sleep(900)
+    
 
 
 def closeFunction():
@@ -71,7 +102,7 @@ def loadConfig():
 def checkNewGrades():
 
     # Start firefox
-    driver = webdriver.Firefox()
+    driver = webdriver.Firefox(options=options)
 
     login(driver)
 
@@ -139,8 +170,8 @@ def selectClasses(driver, ids):
     # Selects wanted lessons from left table
     table = driver.find_element_by_xpath('//*[@id="to-list"]/tbody')
     classes = table.find_elements_by_tag_name('tr')
-    print(classes)
-    print(ids)
+    #print(classes)
+    #print(ids)
      
     for c in classes:
         # Loops through all available lessons
@@ -209,7 +240,7 @@ def checkClass(driver, id):
 def checkNewReleases():
     # Function that does part 3 of the bot
     print("releaseCheck")
-    driver = webdriver.Firefox()
+    driver = webdriver.Firefox(options=options)
 
     login(driver)
 
@@ -243,31 +274,3 @@ def checkNewReleases():
     saveConfig(config)
     logout(driver)
     return
-
-import telegrambot
-
-telegrambot.setEndFunction(closeFunction)
-
-
-config = loadConfig()
-
-# Provide config to telegram bot
-telegrambot.config = config
-
-# Firefox Instance for visiting jExam
-
-knownExams = config["known_exams"]
-
-# checkNewGrades()
-
-noEnd = True
-
-print("start2")
-
-#time.sleep(120)
-while noEnd:
-    checkNewReleases()
-    time.sleep(900)
-    checkNewGrades()
-    time.sleep(900)
-    

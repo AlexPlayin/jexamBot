@@ -16,6 +16,16 @@ and a `users.json`:
     {"sub": [], "private": []}
 
 in the same directory as the `main.py`
+
+### Additional setup
+
+JexamBot requires a multitude of other system installations in order to work
+
+- Firefox browser
+- Geckodriver installation
+- [Compatibillity](https://firefox-source-docs.mozilla.org/testing/geckodriver/geckodriver/Support.html)
+
+
 ## Features
 
 1. Login into jExam
