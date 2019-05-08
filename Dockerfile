@@ -9,6 +9,7 @@ COPY requirements.txt /app/pi/requirements.txt
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --trusted-host pypi.python.org -r pi/requirements.txt
+RUN pip install --upgrade requests
 
 # Define environment variable
 ENV NAME World

@@ -10,6 +10,7 @@ from selenium import webdriver
 from selenium.common import exceptions
 from selenium.webdriver.firefox.options import Options
 
+
 options = Options()
 options.headless = True
 
@@ -17,39 +18,20 @@ import json
 import io
 import time
 
+print("1")
+
 import telegrambot
 
-telegrambot.setEndFunction(closeFunction)
+print("7")
 
 
-config = loadConfig()
-
-# Provide config to telegram bot
-telegrambot.config = config
-
-# Firefox Instance for visiting jExam
-
-knownExams = config["known_exams"]
-
-# checkNewGrades()
-
-noEnd = True
-
-print("start2")
-
-#time.sleep(120)
-while noEnd:
-    checkNewReleases()
-    time.sleep(900)
-    checkNewGrades()
-    time.sleep(900)
-    
 
 
 def closeFunction():
     # function to connect telegrambot with main module
     global noEnd
     noEnd = False
+    
 
 
 def login(driver):
@@ -274,3 +256,28 @@ def checkNewReleases():
     saveConfig(config)
     logout(driver)
     return
+
+
+config = loadConfig()
+
+telegrambot.config = config
+# Provide config to telegram bot
+#telegrambot.config = config
+
+# Firefox Instance for visiting jExam
+
+knownExams = config["known_exams"]
+
+# checkNewGrades()
+
+noEnd = True
+
+print("start2")
+
+#time.sleep(120)
+while noEnd:
+    checkNewReleases()
+    time.sleep(900)
+    checkNewGrades()
+    time.sleep(900)
+    

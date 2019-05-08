@@ -1,3 +1,6 @@
 pyvirtualdisplay
 selenium
-aiogram
+pyTelegramBotAPI
+urllib3==1.25.2
+chardet==3.0.4
+requests
