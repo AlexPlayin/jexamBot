@@ -20,6 +20,17 @@ import hashlib
 
 import telegrambot
 
+import signal
+import sys
+
+def signal_handler(sig, frame):
+        print('Received termination command')
+        telegrambot.tb.stop_bot()
+        print('Stopping bot')
+
+
+signal.signal(signal.SIGINT, signal_handler)
+
 noEnd = True
 
 def closeFunction():
