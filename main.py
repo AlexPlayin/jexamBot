@@ -307,10 +307,11 @@ def checkNewReleases(config):
 
 
 
-def ending():
-    global noEnd
-    noEnd = False
+#def ending():
+ #   global noEnd
+ #   noEnd = False
 
+#telegrambot.setEndFunction(ending)
 # Provide config to telegram bot
 #telegrambot.config = config
 
@@ -320,8 +321,6 @@ def ending():
 config = loadConfig()
 
 knownExams = config['known_exams']
-
-telegrambot.setEndFunction(ending)
 
 known_exams = checkNewGrades(knownExams, config)
 
