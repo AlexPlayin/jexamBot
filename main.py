@@ -25,6 +25,7 @@ import sys
 
 def signal_handler(sig, frame):
         print('Received termination command')
+        telegrambot.tb.stop_polling()
         telegrambot.tb.stop_bot()
         print('Stopping bot')
 
@@ -306,6 +307,10 @@ def checkNewReleases(config):
 
 
 
+def ending():
+    global noEnd
+    noEnd = False
+
 # Provide config to telegram bot
 #telegrambot.config = config
 
@@ -316,6 +321,8 @@ config = loadConfig()
 
 knownExams = config['known_exams']
 
+telegrambot.setEndFunction(ending)
+
 known_exams = checkNewGrades(knownExams, config)
 
 config['known_exams'] = knownExams
@@ -324,10 +331,20 @@ saveConfig(config)
 
 noEnd = True
 
+counter = 0
+
 while noEnd:
-    checkNewReleases(config)
-    time.sleep(900)
-    known_exams = checkNewGrades(knownExams, config)
-    config['known_exams'] = known_exams
-    saveConfig(config)
-    time.sleep(900)
+
+    if counter == 0:
+        checkNewReleases(config)
+    if counter == config['cycle']:
+        known_exams = checkNewGrades(knownExams, config)
+        config['known_exams'] = known_exams
+        saveConfig(config)
+
+    counter += 1
+
+    if counter == config['cycle'] * 2:
+        counter = 0
+
+    time.sleep(1)
