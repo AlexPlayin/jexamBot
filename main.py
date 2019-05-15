@@ -46,6 +46,12 @@ def login(driver, config):
         '//*[@id="cntntwrpr"]/div[1]/div/div[2]/div/div/form/ol/li[3]/input'
     ).click()
 
+    print(driver.current_url)
+    if driver.current_url == "https://jexam.inf.tu-dresden.de/de.jexam.web.v4.5/spring/welcome?error=concurrentsession":
+        print('Login failed, possibly due to wrong logout. Will try again next interval')
+        return False
+
+    return True
 
 def logout(driver):
     # Presses logout link on jExam
@@ -57,6 +63,7 @@ def logout(driver):
     # Closes firefox when EVERYTHING on DOM is loaded --> sleep is required so that it waits until
     # logout has happened
     driver.close()
+    print("Successfully logged out !")
     return
 
 
@@ -82,16 +89,19 @@ def checkNewGrades(knownExams, config):
     # Start firefox
     driver = webdriver.Firefox(options=options)
 
-    login(driver, config)
+    login_succesful = login(driver, config)
+
+    if not login_succesful:
+        return
 
     # ------ MOVE TO RESULTS PAGE -----
-
     driver.find_element_by_xpath(
-        "/html/body/div/div[2]/div[3]/div[1]/div/div[1]/div/div[2]/ul/li[5]/a"
+    "/html/body/div/div[2]/div[3]/div[1]/div/div[1]/div/div[2]/ul/li[5]/a"
     ).click()
     driver.find_element_by_xpath(
-        "/html/body/div/div[2]/div[3]/div[1]/div/div/div/form/ol/li[3]/input"
+    "/html/body/div/div[2]/div[3]/div[1]/div/div/div/form/ol/li[3]/input"
     ).click()
+    
 
     # ------ ON RESULTS PAGE ------
 
@@ -139,6 +149,7 @@ def checkNewGrades(knownExams, config):
     #         # Catch when we reach bottom of the table
     #         print("No more items")
     #         flag = 1
+
     htmltag = driver.find_element_by_tag_name("html")
     content = htmltag.get_attribute("innerHTML")
 
@@ -235,8 +246,12 @@ def checkNewReleases(config):
     print("releaseCheck")
     driver = webdriver.Firefox(options=options)
 
-    login(driver, config)
 
+    login_succesful = login(driver, config)
+
+    if not login_succesful:
+        return 
+        
     driver.get(
         "https://jexam.inf.tu-dresden.de/de.jexam.web.v4.5/spring/scheduler?semesterId="
         + config["classes"]["semesterid"]
@@ -244,8 +259,18 @@ def checkNewReleases(config):
 
     selectClasses(driver, config["classes"]["watch"])
 
-    time.sleep(10)
+    time.sleep(1)
 
+    print("befor buttons") 
+    extensionbuttons = driver.find_elements_by_xpath("//*[contains(@class, 'loadButton') and contains(@class, 'wIcon') and contains(@class, 'icon_plugin_add')]")
+
+    for button in extensionbuttons:
+        if button.is_displayed():
+            print("Pressing button for " + button.get_attribute("onclick"))
+            button.click()
+    print("after btuton")
+    time.sleep(1)
+    
     for classID in config["classes"]["watch"]:
 
         classID = str(classID)
@@ -288,11 +313,10 @@ saveConfig(config)
 
 noEnd = True
 
-    #time.sleep(120)
 while noEnd:
+    checkNewReleases(config)
+    time.sleep(900)
     known_exams = checkNewGrades(knownExams, config)
     config['known_exams'] = known_exams
     saveConfig(config)
-    time.sleep(900)
-    checkNewReleases(config)
     time.sleep(900)
