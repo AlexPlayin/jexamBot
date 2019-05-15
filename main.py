@@ -1,6 +1,5 @@
 #!/usr/local/bin/python3
 
-print("2")
 # Required for server application as selenium works in firefox window
 from pyvirtualdisplay import Display
 display = Display(visible=0, size=(800, 600))
@@ -17,15 +16,11 @@ options.headless = True
 import json
 import io
 import time
-
-print("1")
+import hashlib
 
 import telegrambot
 
-print("7")
-
-
-
+noEnd = True
 
 def closeFunction():
     # function to connect telegrambot with main module
@@ -34,7 +29,7 @@ def closeFunction():
     
 
 
-def login(driver):
+def login(driver, config):
 
     driver.get("https://jexam.inf.tu-dresden.de/de.jexam.web.v4.5/spring/welcome")
 
@@ -81,12 +76,13 @@ def loadConfig():
     return config_temp
 
 
-def checkNewGrades():
+def checkNewGrades(knownExams, config):
+    print("Checking for new grades!")
 
     # Start firefox
     driver = webdriver.Firefox(options=options)
 
-    login(driver)
+    login(driver, config)
 
     # ------ MOVE TO RESULTS PAGE -----
 
@@ -99,53 +95,68 @@ def checkNewGrades():
 
     # ------ ON RESULTS PAGE ------
 
-    i = 0
-    flag = 0
+    # i = 0
+    # flag = 0
 
-    while flag == 0:
+    # while flag == 0:
 
-        # Appears to be the syntax for columns
-        # TODO: Needs confirmation
-        identifier = "node0i" + str(i) + "i0"
+    #     # Appears to be the syntax for columns
+    #     # TODO: Needs confirmation
+    #     identifier = "node0i" + str(i) + "i0"
 
-        try:
-            # Find a fitting column to search within
-            parent = driver.find_element_by_id(identifier)
+    #     try:
+    #         # Find a fitting column to search within
+    #         parent = driver.find_element_by_id(identifier)
 
-            # Collect data from childs
-            name = (
-                parent.find_elements_by_tag_name("td")[2]
-                .find_elements_by_tag_name("span")[0]
-                .get_attribute("innerHTML")
-            )
-            grade = (
-                parent.find_elements_by_tag_name("td")[5]
-                .find_elements_by_tag_name("span")[0]
-                .get_attribute("innerHTML")
-            )
+    #         # Collect data from childs
+    #         name = (
+    #             parent.find_elements_by_tag_name("td")[2]
+    #             .find_elements_by_tag_name("span")[0]
+    #             .get_attribute("innerHTML")
+    #         )
+    #         grade = (
+    #             parent.find_elements_by_tag_name("td")[5]
+    #             .find_elements_by_tag_name("span")[0]
+    #             .get_attribute("innerHTML")
+    #         )
 
-            # Remove whitespaces from grade
-            grade = grade.strip()
+    #         # Remove whitespaces from grade
+    #         grade = grade.strip()
 
-            if name not in knownExams:
-                telegrambot.sendBroadcast(name + " ist raus!")
-                telegrambot.sendPrivate("Note ist " + grade)
-                knownExams.append(name)
-                saveConfig(config)
+    #         if name not in knownExams:
+    #             telegrambot.sendBroadcast(name + " ist raus!")
+    #             telegrambot.sendPrivate("Note ist " + grade) 
+    #             knownExams.append(name)
+    #             saveConfig(config)
 
-            print("Name: " + name + "\n")
-            print("Note: " + grade + "\n")
+    #         print("Name: " + name + "\n")
+    #         print("Note: " + grade + "\n")
 
-            # Advance inside of table
-            i = i + 1
+    #         # Advance inside of table
+    #         i = i + 1
 
-        except exceptions.NoSuchElementException:
-            # Catch when we reach bottom of the table
-            print("No more items")
-            flag = 1
+    #     except exceptions.NoSuchElementException:
+    #         # Catch when we reach bottom of the table
+    #         print("No more items")
+    #         flag = 1
+    htmltag = driver.find_element_by_tag_name("html")
+    content = htmltag.get_attribute("innerHTML")
+
+    hash_object = hashlib.sha1(content.encode())
+    hex_dig = hash_object.hexdigest()
+    
+    if not hex_dig == knownExams:
+        print('Different hash was found !')
+        telegrambot.sendBroadcast('Die Notenseite hat sich verändert !')
+        print('Message was sent out !')
+
+    print("Current hashcode is:")
+    print(hex_dig)
 
     # Logout to avoid timeout
     logout(driver)
+
+    return hex_dig
 
 
 def selectClasses(driver, ids):
@@ -219,12 +230,12 @@ def checkClass(driver, id):
 
 
 
-def checkNewReleases():
+def checkNewReleases(config):
     # Function that does part 3 of the bot
     print("releaseCheck")
     driver = webdriver.Firefox(options=options)
 
-    login(driver)
+    login(driver, config)
 
     driver.get(
         "https://jexam.inf.tu-dresden.de/de.jexam.web.v4.5/spring/scheduler?semesterId="
@@ -258,26 +269,30 @@ def checkNewReleases():
     return
 
 
-config = loadConfig()
 
-telegrambot.config = config
 # Provide config to telegram bot
 #telegrambot.config = config
 
 # Firefox Instance for visiting jExam
 
-knownExams = config["known_exams"]
 
-# checkNewGrades()
+config = loadConfig()
+
+knownExams = config['known_exams']
+
+known_exams = checkNewGrades(knownExams, config)
+
+config['known_exams'] = knownExams
+
+saveConfig(config)
 
 noEnd = True
 
-print("start2")
-
-#time.sleep(120)
+    #time.sleep(120)
 while noEnd:
-    checkNewReleases()
+    known_exams = checkNewGrades(knownExams, config)
+    config['known_exams'] = known_exams
+    saveConfig(config)
     time.sleep(900)
-    checkNewGrades()
+    checkNewReleases(config)
     time.sleep(900)
-    

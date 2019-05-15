@@ -11,7 +11,22 @@ config = {}
 
 not_stopped = True
 
-TOKEN = config['telegram']['bot_token']
+def saveConfig(config_temp):
+    # param: config object
+    # Writes into config.json file
+    with open("config.json", "w") as outfile:
+        json.dump(config_temp, outfile)
+
+
+def loadConfig():
+    # Reads from config.json file
+    # Returns config as object
+    with open("config.json") as data_file:
+        config_temp = json.load(data_file)
+
+    return config_temp
+
+
 
 def loadUsers ():
     with open('users.json') as data_file:
@@ -41,20 +56,20 @@ def sendBroadcast (message):
     for uid in chatids:
         tb.send_message(uid, message)
 
-def sendBroadcast (message):
+def sendPrivate (message):
     for uid in privateids:
         tb.send_message(uid, message)
 
-print("4")
+config = loadConfig()
+
+TOKEN = config['telegram']['bot_token']
 
 chatids, privateids = loadUsers()
-print("5")
 
 tb = telebot.TeleBot(TOKEN)
-print("6")
 
 tb.set_update_listener(listener)
-print("8")
+
 def toPoll():
     tb.polling()
     tb.polling(none_stop=True)
@@ -62,4 +77,3 @@ def toPoll():
 
 t = threading.Thread(target=toPoll)
 t.start()
-print("9")
