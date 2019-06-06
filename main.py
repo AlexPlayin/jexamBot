@@ -10,6 +10,12 @@ from selenium.common import exceptions
 from selenium.webdriver.firefox.options import Options
 
 
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException
+
+
 options = Options()
 options.headless = True
 
@@ -30,7 +36,7 @@ def signal_handler(sig, frame):
         print('Stopping bot')
 
 
-signal.signal(signal.SIGINT, signal_handler)
+#signal.signal(signal.SIGINT, signal_handler)
 
 noEnd = True
 
@@ -58,9 +64,13 @@ def login(driver, config):
         '//*[@id="cntntwrpr"]/div[1]/div/div[2]/div/div/form/ol/li[3]/input'
     ).click()
 
+    driver.implicitly_wait(5)
+
+    # Login-Failure-Detection
     print(driver.current_url)
-    if driver.current_url == "https://jexam.inf.tu-dresden.de/de.jexam.web.v4.5/spring/welcome?error=concurrentsession":
+    if driver.current_url == "https://jexam.inf.tu-dresden.de/de.jexam.web.v4.5/spring/welcome?error=concurrentsession" or driver.current_url == "https://jexam.inf.tu-dresden.de/de.jexam.web.v4.5/spring/welcome":
         print('Login failed, possibly due to wrong logout. Will try again next interval')
+        driver.close()
         return False
 
     return True
@@ -95,7 +105,7 @@ def loadConfig():
     return config_temp
 
 
-def checkNewGrades(knownExams, config):
+def checkNewGrades(config):
     print("Checking for new grades!")
 
     # Start firefox
@@ -113,81 +123,47 @@ def checkNewGrades(knownExams, config):
     driver.find_element_by_xpath(
     "/html/body/div/div[2]/div[3]/div[1]/div/div/div/form/ol/li[3]/input"
     ).click()
+
+    # ------- ON RESULTS PAGE --------
+
+    allEntries = driver.find_element_by_xpath("/html/body/div/div[2]/div[3]/div[1]/div/div/table/tbody").find_elements_by_tag_name("tr")
     
+    for entry in allEntries:
 
-    # ------ ON RESULTS PAGE ------
+        tds = entry.find_elements_by_tag_name("td")
+            
+        try:
+            gradeSpan = tds[len(tds) - 1].find_element_by_tag_name("span")
 
-    # i = 0
-    # flag = 0
+        except Exception:
+            continue
 
-    # while flag == 0:
+        if gradeSpan.get_attribute("innerHTML") == " ":
+            continue
+        
+        name = tds[2].find_elements_by_tag_name("span")[0].get_attribute("innerHTML")
+        
+        try:
+            if not tds[2].find_elements_by_tag_name("span")[1].get_attribute("innerHTML") == "Prüfung":
+                continue
+        except Exception:
+            continue
 
-    #     # Appears to be the syntax for columns
-    #     # TODO: Needs confirmation
-    #     identifier = "node0i" + str(i) + "i0"
+        if name not in config["knownExams"]:
 
-    #     try:
-    #         # Find a fitting column to search within
-    #         parent = driver.find_element_by_id(identifier)
+            telegrambot.sendBroadcast("Ein neues Prüfungsergebnis ist erschienen: " + name)
 
-    #         # Collect data from childs
-    #         name = (
-    #             parent.find_elements_by_tag_name("td")[2]
-    #             .find_elements_by_tag_name("span")[0]
-    #             .get_attribute("innerHTML")
-    #         )
-    #         grade = (
-    #             parent.find_elements_by_tag_name("td")[5]
-    #             .find_elements_by_tag_name("span")[0]
-    #             .get_attribute("innerHTML")
-    #         )
+            config["knownExams"].append(name)
+            saveConfig(config)
 
-    #         # Remove whitespaces from grade
-    #         grade = grade.strip()
-
-    #         if name not in knownExams:
-    #             telegrambot.sendBroadcast(name + " ist raus!")
-    #             telegrambot.sendPrivate("Note ist " + grade) 
-    #             knownExams.append(name)
-    #             saveConfig(config)
-
-    #         print("Name: " + name + "\n")
-    #         print("Note: " + grade + "\n")
-
-    #         # Advance inside of table
-    #         i = i + 1
-
-    #     except exceptions.NoSuchElementException:
-    #         # Catch when we reach bottom of the table
-    #         print("No more items")
-    #         flag = 1
-
-    htmltag = driver.find_element_by_tag_name("html")
-    content = htmltag.get_attribute("innerHTML")
-
-    hash_object = hashlib.sha1(content.encode())
-    hex_dig = hash_object.hexdigest()
     
-    if not hex_dig == knownExams:
-        print('Different hash was found !')
-        telegrambot.sendBroadcast('Die Notenseite hat sich verändert !')
-        print('Message was sent out !')
-
-    print("Current hashcode is:")
-    print(hex_dig)
-
-    # Logout to avoid timeout
     logout(driver)
 
-    return hex_dig
-
-
+    
 def selectClasses(driver, ids):
     # Selects wanted lessons from left table
     table = driver.find_element_by_xpath('//*[@id="to-list"]/tbody')
     classes = table.find_elements_by_tag_name('tr')
-    #print(classes)
-    #print(ids)
      
     for c in classes:
         # Loops through all available lessons
@@ -307,39 +283,24 @@ def checkNewReleases(config):
 
 
 
-#def ending():
- #   global noEnd
- #   noEnd = False
-
-#telegrambot.setEndFunction(ending)
-# Provide config to telegram bot
-#telegrambot.config = config
-
 # Firefox Instance for visiting jExam
 
 
 config = loadConfig()
 
-knownExams = config['known_exams']
-
-known_exams = checkNewGrades(knownExams, config)
-
-config['known_exams'] = knownExams
-
-saveConfig(config)
-
 noEnd = True
 
 counter = 0
+
+checkNewGrades(config)
 
 while noEnd:
 
     if counter == 0:
         checkNewReleases(config)
+    
     if counter == config['cycle']:
-        known_exams = checkNewGrades(knownExams, config)
-        config['known_exams'] = known_exams
-        saveConfig(config)
+         checkNewGrades(config)
 
     counter += 1
 
